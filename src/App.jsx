@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const projects = [
   {
@@ -40,13 +40,45 @@ const experience = [
   { role: 'Junior Developer', company: 'Forma Studio', period: '2018–2020' },
 ]
 
-function ProjectCard({ project }) {
+const OVERFLOW = 20 // image is 20% taller than container
+const SECTION_GAP = 40 // vh of extra scroll between sections
+
+function ProjectCard({ project, index, isLast }) {
+  const [imgOffset, setImgOffset] = useState(0)
+
+  useEffect(() => {
+    let ticking = false
+    const onScroll = () => {
+      if (!ticking) {
+        ticking = true
+        requestAnimationFrame(() => {
+          const viewH = window.innerHeight
+          const gap = viewH * (SECTION_GAP / 100)
+          const sectionStart = index * (viewH + gap)
+          const scrollPast = window.scrollY - sectionStart
+          const progress = Math.max(0, Math.min(1, scrollPast / (viewH + gap)))
+          const maxShift = viewH * (OVERFLOW / 100)
+          setImgOffset(-maxShift * progress)
+          ticking = false
+        })
+      }
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true })
+    onScroll()
+    return () => window.removeEventListener('scroll', onScroll)
+  }, [index])
+
   return (
-    <section className="relative w-full aspect-[16/10] overflow-hidden bg-neutral-100">
+    <section
+      className="sticky top-0 h-screen w-full overflow-hidden"
+      style={{ zIndex: index + 1, marginBottom: isLast ? undefined : `${SECTION_GAP}vh` }}
+    >
       <img
         src={project.image}
         alt={project.title}
-        className="h-full w-full object-cover"
+        className="absolute inset-0 h-[120%] w-full object-cover will-change-transform"
+        style={{ transform: `translateY(${imgOffset}px)` }}
         loading="lazy"
       />
       <div className="absolute bottom-0 left-0 px-6 pb-6 md:px-10 md:pb-8">
@@ -159,13 +191,13 @@ function App() {
 
       {/* Projects */}
       <main id="work">
-        {projects.map((project) => (
-          <ProjectCard key={project.title} project={project} />
+        {projects.map((project, index) => (
+          <ProjectCard key={project.title} project={project} index={index} isLast={index === projects.length - 1} />
         ))}
       </main>
 
       {/* Footer */}
-      <footer className="bg-neutral-950 px-6 py-16 text-white md:px-10">
+      <footer className="relative bg-neutral-950 px-6 py-16 text-white md:px-10" style={{ zIndex: projects.length + 1 }}>
         <div className="mx-auto max-w-6xl">
           <div className="mb-16 max-w-lg">
             <p className="text-sm leading-relaxed text-neutral-400">
